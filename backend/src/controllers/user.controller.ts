@@ -7,7 +7,7 @@ import { catchAsync } from "../utils/catchAsync";
 
 export const updateProfile = catchAsync(async (req: Request, res: Response) => {
   if (!req.user) throw ApiError.unauthorized();
-  const allowed = ["name", "bio", "skills", "phone", "country", "timezone", "socialLinks", "avatarUrl", "bannerUrl"];
+  const allowed = ["name", "bio", "skills", "phone", "country", "timezone", "socialLinks", "avatarUrl", "bannerUrl", "preferences"];
   const updates: Record<string, unknown> = {};
   for (const key of allowed) {
     if (req.body[key] !== undefined) updates[key] = req.body[key];
@@ -18,7 +18,7 @@ export const updateProfile = catchAsync(async (req: Request, res: Response) => {
 
 export const getProfile = catchAsync(async (req: Request, res: Response) => {
   const user = await User.findById(req.params.id).select(
-    "name email avatarUrl bannerUrl bio skills country timezone socialLinks createdAt"
+    "name email avatarUrl bannerUrl bio skills country timezone socialLinks preferences createdAt"
   );
   if (!user) throw ApiError.notFound("User not found");
 

@@ -1,13 +1,30 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
-import { useAppDispatch } from "@/app/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { logout } from "@/features/auth/authSlice";
 
 export default function SettingsPage() {
   const dispatch = useAppDispatch();
-  const [darkMode, setDarkMode] = useState(true);
+  const queryClient = useQueryClient();
+  const currentUser = useAppSelector((s) => s.auth.user);
   const [emailNotifs, setEmailNotifs] = useState(true);
+
+  const { data } = useQuery({
+    queryKey: ["profile", currentUser?.id],
+    queryFn: async () => (await api.get(`/users/${currentUser!.id}`)).data,
+    enabled: Boolean(currentUser),
+  });
+
+  useEffect(() => {
+    if (data?.user?.preferences) setEmailNotifs(data.user.preferences.emailNotifications ?? true);
+  }, [data]);
+
+  const updatePreferences = useMutation({
+    mutationFn: (emailNotifications: boolean) =>
+      api.patch("/users/me", { preferences: { emailNotifications } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["profile"] }),
+  });
 
   const logoutAll = useMutation({
     mutationFn: () => api.post("/auth/logout-all"),
@@ -19,12 +36,16 @@ export default function SettingsPage() {
       <h1 className="text-2xl font-bold font-display">Settings</h1>
 
       <SettingsSection title="Appearance">
-        <ToggleRow
-          label="Dark mode"
-          description="SyncDoc is currently dark-mode only in this build — light mode is on the roadmap."
-          checked={darkMode}
-          onChange={setDarkMode}
-        />
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="font-medium text-sm">Dark mode</div>
+            <p className="text-xs text-ink-500 mt-0.5">
+              SyncDoc is dark-mode only in this build. A real light theme needs a full parallel
+              color palette across every screen, not just a toggle — it's planned but not built yet,
+              so there's no switch here pretending otherwise.
+            </p>
+          </div>
+        </div>
       </SettingsSection>
 
       <SettingsSection title="Notifications">
@@ -32,7 +53,10 @@ export default function SettingsPage() {
           label="Email notifications"
           description="Get emailed about comments, mentions, and shares."
           checked={emailNotifs}
-          onChange={setEmailNotifs}
+          onChange={(v) => {
+            setEmailNotifs(v);
+            updatePreferences.mutate(v);
+          }}
         />
       </SettingsSection>
 
@@ -84,7 +108,7 @@ function ToggleRow({
       <button
         onClick={() => onChange(!checked)}
         className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${
-          checked ? "bg-brand-gradient" : "bg-white/[0.12]"
+          checked ? "bg-brand-gradient" : "bg-black/[0.08]"
         }`}
       >
         <span
