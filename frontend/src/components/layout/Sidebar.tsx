@@ -26,7 +26,14 @@ const NAV_ITEMS = [
 export default function Sidebar() {
   const user = useAppSelector((s) => s.auth.user);
   const location = useLocation();
-  const currentHref = `${location.pathname}${location.search}`;
+  const currentFilter = new URLSearchParams(location.search).get("filter");
+
+  function isNavActive(href: string): boolean {
+    const [path, query] = href.split("?");
+    if (location.pathname !== path) return false;
+    const targetFilter = query ? new URLSearchParams(query).get("filter") : null;
+    return targetFilter === currentFilter;
+  }
 
   return (
     <aside className="w-64 shrink-0 h-screen sticky top-0 flex flex-col glass-panel border-r border-black/[0.07] rounded-none px-4 py-6">
@@ -36,19 +43,12 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1">
-        {NAV_ITEMS.map((item) => {
-          // "/documents" (no filter) must NOT count as active when we're
-          // actually on "/documents?filter=trash" etc, so match on the
-          // full pathname+search rather than NavLink's pathname-only check.
-          const isActive =
-            item.to.includes("?") ? currentHref === item.to : location.pathname === item.to && !location.search;
-          return (
-            <NavLink key={item.to} to={item.to} className={`sidebar-link ${isActive ? "active" : ""}`}>
-              <item.icon className="text-lg" />
-              {item.label}
-            </NavLink>
-          );
-        })}
+        {NAV_ITEMS.map((item) => (
+          <NavLink key={item.to} to={item.to} className={`sidebar-link ${isNavActive(item.to) ? "active" : ""}`}>
+            <item.icon className="text-lg" />
+            {item.label}
+          </NavLink>
+        ))}
       </nav>
 
       <div className="space-y-1 pt-4 border-t border-black/[0.07]">

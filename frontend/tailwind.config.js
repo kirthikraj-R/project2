@@ -5,22 +5,29 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Warm beige base - page background and elevated surfaces.
+        // Base/ink are CSS-variable-backed (not fixed hex) so toggling the
+        // `dark` class on <html> can swap real values at runtime - the
+        // `rgb(var(--x) / <alpha-value>)` form is Tailwind's documented
+        // pattern for keeping opacity modifiers (bg-base-900/50 etc) working
+        // with variable-based colors. Light/dark values are defined in
+        // src/styles/index.css under :root and .dark.
         base: {
-          950: "#e8dfc8",
-          900: "#f3ede0",
-          850: "#fbf8f1",
-          800: "#e9e0cc",
-          700: "#d8cbae",
+          950: "rgb(var(--c-base-950) / <alpha-value>)",
+          900: "rgb(var(--c-base-900) / <alpha-value>)",
+          850: "rgb(var(--c-base-850) / <alpha-value>)",
+          800: "rgb(var(--c-base-800) / <alpha-value>)",
+          700: "rgb(var(--c-base-700) / <alpha-value>)",
         },
-        // Deep forest-green-charcoal text on the beige backgrounds.
         ink: {
-          100: "#1f2e23",
-          300: "#3c4f3f",
-          500: "#6b7a6c",
-          700: "#a3ac9c",
+          100: "rgb(var(--c-ink-100) / <alpha-value>)",
+          300: "rgb(var(--c-ink-300) / <alpha-value>)",
+          500: "rgb(var(--c-ink-500) / <alpha-value>)",
+          700: "rgb(var(--c-ink-700) / <alpha-value>)",
         },
-        // Primary accent - deep forest green gradient family.
+        // Brand/accent stay fixed across light/dark - a consistent accent
+        // color across both modes is a deliberate, common choice (kept
+        // scope focused on surfaces/text, the two tokens that actually
+        // define "light vs dark").
         brand: {
           violet: "#1b4332",
           indigo: "#2d6a4f",
@@ -28,24 +35,18 @@ export default {
           cyan: "#74c69d",
         },
         accent: {
-          // Kept as a visibly different hue from the deep-forest brand
-          // green so "online/success" doesn't visually blend into every
-          // brand-colored button and accent on the page.
           success: "#52b788",
           warning: "#c9a227",
           danger: "#b33a3a",
         },
-        // Neo-Apple palette for the auth flow - unified with the same
-        // dark green/beige identity. Blob colors are soft sage/beige
-        // tones with enough weight to read against the beige page.
         neo: {
-          void: "#f3ede0",
-          charcoal: "#fbf8f1",
+          void: "rgb(var(--c-base-900) / <alpha-value>)",
+          charcoal: "rgb(var(--c-base-850) / <alpha-value>)",
           ember: "#95b8a6",
           amber: "#d8cbae",
           rust: "#6b8f7a",
-          paper: "#1f2e23",
-          smoke: "#6b7a6c",
+          paper: "rgb(var(--c-ink-100) / <alpha-value>)",
+          smoke: "rgb(var(--c-ink-500) / <alpha-value>)",
         },
       },
       fontFamily: {

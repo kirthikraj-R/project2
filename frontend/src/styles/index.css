@@ -2,12 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Light theme (default) - warm beige surfaces, deep forest-green text.
+     Values are space-separated RGB triplets (no commas, no rgb()) so
+     Tailwind's `rgb(var(--x) / <alpha-value>)` pattern can apply opacity
+     modifiers like bg-base-900/50 on top of them. */
+  --c-base-950: 232 223 200;
+  --c-base-900: 243 237 224;
+  --c-base-850: 251 248 241;
+  --c-base-800: 233 224 204;
+  --c-base-700: 216 203 174;
+  --c-ink-100: 31 46 35;
+  --c-ink-300: 60 79 63;
+  --c-ink-500: 107 122 108;
+  --c-ink-700: 163 172 156;
+}
+
+.dark {
+  /* Dark theme - deep forest-green surfaces, warm beige text. Brand accent
+     and semantic colors (success/warning/danger) stay the same in both
+     modes by design; only surfaces and text invert. */
+  --c-base-950: 10 20 16;
+  --c-base-900: 15 31 24;
+  --c-base-850: 22 41 31;
+  --c-base-800: 28 50 38;
+  --c-base-700: 39 66 50;
+  --c-ink-100: 237 228 211;
+  --c-ink-300: 188 199 173;
+  --c-ink-500: 138 154 134;
+  --c-ink-700: 90 107 88;
+}
+
 @layer base {
   html {
     @apply scroll-smooth;
   }
   body {
-    @apply bg-base-900 text-ink-100 font-body antialiased;
+    @apply bg-base-900 text-ink-100 font-body antialiased transition-colors duration-300;
   }
   h1, h2, h3, h4 {
     @apply font-display;

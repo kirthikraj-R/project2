@@ -14,8 +14,8 @@ import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { createLowlight, common } from "lowlight";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { HiOutlineArrowDownTray, HiOutlineStar, HiOutlineBookmark, HiOutlineLockClosed, HiOutlineTrash, HiOutlineClock } from "react-icons/hi2";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { HiOutlineArrowDownTray, HiOutlineStar, HiOutlineBookmark, HiOutlineLockClosed, HiOutlineTrash, HiOutlineClock, HiOutlineShare, HiOutlineArchiveBox, HiOutlineArchiveBoxXMark } from "react-icons/hi2";
 import { api } from "@/api/client";
 import { useYjsSocket } from "@/hooks/useYjsSocket";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
@@ -23,6 +23,7 @@ import EditorToolbar from "@/components/editor/EditorToolbar";
 import PresenceStack from "@/components/editor/PresenceStack";
 import CommentsPanel from "@/components/editor/CommentsPanel";
 import VersionHistoryPanel from "@/components/editor/VersionHistoryPanel";
+import ShareDialog from "@/components/editor/ShareDialog";
 
 const lowlight = createLowlight(common);
 
@@ -33,6 +34,7 @@ interface DocumentDetail {
   isPinnedBy: string[];
   isFavoritedBy: string[];
   isLocked: boolean;
+  isArchived: boolean;
   wordCount: number;
 }
 
@@ -77,8 +79,12 @@ export default function DocumentEditorPage() {
     [ydoc]
   );
 
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const saveContent = useMutation({
     mutationFn: (content: unknown) => api.patch(`/documents/${id}`, { content }),
+    onMutate: () => setSaveStatus("saving"),
+    onSuccess: () => setSaveStatus("saved"),
+    onError: () => setSaveStatus("idle"),
   });
   const debouncedSave = useDebouncedCallback((content: unknown) => saveContent.mutate(content), 2000);
 
@@ -96,8 +102,23 @@ export default function DocumentEditorPage() {
     api.patch(`/documents/${id}`, { title: next });
   }, 800);
 
-  const togglePin = useMutation({ mutationFn: () => api.post(`/documents/${id}/pin`) });
-  const toggleFavorite = useMutation({ mutationFn: () => api.post(`/documents/${id}/favorite`) });
+  const queryClient = useQueryClient();
+  const invalidateDoc = () => queryClient.invalidateQueries({ queryKey: ["document", id] });
+
+  // Bug fix: these previously had no onSuccess handler at all, so the
+  // toggle succeeded on the backend but the star/pin icon color (driven by
+  // `doc.isFavoritedBy`/`doc.isPinnedBy` from the cached query) never
+  // updated - clicking it appeared to do nothing.
+  const togglePin = useMutation({ mutationFn: () => api.post(`/documents/${id}/pin`), onSuccess: invalidateDoc });
+  const toggleFavorite = useMutation({
+    mutationFn: () => api.post(`/documents/${id}/favorite`),
+    onSuccess: invalidateDoc,
+  });
+  const toggleArchive = useMutation({
+    mutationFn: () => api.post(`/documents/${id}/archive`),
+    onSuccess: invalidateDoc,
+  });
+  const [showShare, setShowShare] = useState(false);
   const moveToTrash = useMutation({
     mutationFn: () => api.delete(`/documents/${id}`),
     onSuccess: () => navigate("/documents"),
@@ -131,6 +152,16 @@ export default function DocumentEditorPage() {
             <button onClick={() => toggleFavorite.mutate()} className="p-2 rounded-lg hover:bg-black/[0.06]" title="Favorite">
               <HiOutlineStar className={doc.isFavoritedBy?.length ? "text-accent-warning" : "text-ink-500"} />
             </button>
+            <button
+              onClick={() => toggleArchive.mutate()}
+              className="p-2 rounded-lg hover:bg-black/[0.06] text-ink-500 hover:text-ink-100"
+              title={doc.isArchived ? "Unarchive" : "Archive"}
+            >
+              {doc.isArchived ? <HiOutlineArchiveBoxXMark /> : <HiOutlineArchiveBox />}
+            </button>
+            <button onClick={() => setShowShare(true)} className="p-2 rounded-lg hover:bg-black/[0.06] text-ink-500 hover:text-ink-100" title="Share">
+              <HiOutlineShare />
+            </button>
             <a href={`/api/documents/${id}/export/pdf`} target="_blank" rel="noreferrer" className="btn-ghost text-sm px-3 py-2 flex items-center gap-1.5">
               <HiOutlineArrowDownTray /> Export
             </a>
@@ -154,8 +185,20 @@ export default function DocumentEditorPage() {
             <HiOutlineLockClosed /> This document is read-only.
           </div>
         )}
+        {doc.isArchived && (
+          <div className="flex items-center gap-2 text-xs text-ink-500 bg-black/[0.03] rounded-lg px-3 py-2">
+            <HiOutlineArchiveBox /> This document is archived.
+          </div>
+        )}
 
-        <EditorToolbar editor={editor} />
+        <div className="flex items-center justify-between">
+          <EditorToolbar editor={editor} />
+        </div>
+        <p className="text-xs text-ink-700 -mt-2 px-1">
+          {saveStatus === "saving" && "Saving…"}
+          {saveStatus === "saved" && "All changes saved"}
+          {saveStatus === "idle" && "\u00A0"}
+        </p>
 
         <div className="glass-panel p-6 min-h-[500px]">
           <EditorContent editor={editor} />
@@ -163,6 +206,8 @@ export default function DocumentEditorPage() {
       </div>
 
       {id && <CommentsPanel documentId={id} />}
+
+      {id && showShare && <ShareDialog documentId={id} onClose={() => setShowShare(false)} />}
 
       {id && showVersions && (
         <VersionHistoryPanel
